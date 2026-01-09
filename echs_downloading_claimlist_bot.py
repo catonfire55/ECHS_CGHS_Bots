@@ -11,11 +11,110 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from openpyxl import load_workbook
 import time, os, psutil, subprocess, sys
-import threading
 from openpyxl.utils import get_column_letter
 
 
 # ------------------ Helper Functions ------------------
+
+download_path_og = os.path.join(os.path.expanduser("~"), "Documents", "temp_dir")
+rows_del = [1,2,3,4,5,6,7]
+fix_columns_indi = ["Claim ID","Region","Hospital Name","Card ID","Name Of ESM","Patient Name","Patient Type","Admit Type","Accept Date","Net Claim Amt.","Approved Amt.","Processed On"]
+fix_columns = ["Claim ID","Region","Hospital Name","Card ID","Name Of ESM","Patient Name","Patient Type","Admit Type","Accept Date","Net Claim Amt.","Approved Amt.","Processed On","Status"]
+fix_col_width = {
+    'A': 13,
+    'B': 10,
+    'C': 49.4,
+    'D': 20,
+    'E': 22,
+    'F': 22.5,
+    'G': 10.5,
+    'H': 10,
+    'I': 18,
+    'J': 15.5,
+    'K': 17.2,
+    'L': 22,
+    'M': 37,
+}
+if os.path.exists(download_path_og):
+    shutil.rmtree(download_path_og)
+    os.makedirs(download_path_og)
+    print(">>> Found Previous Files...Cleaned")
+else:
+    os.makedirs(download_path_og)
+    print(">>> Made the download dir...")
+# options = Options()
+# options.add_experimental_option("prefs", {
+#     "download.prompt_for_download": False,
+#     "plugins.always_open_pdf_externally": True
+# })
+# options.add_argument('--ignore-certificate-errors')
+# options.add_argument('--start-maximized')
+
+# driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow", "downloadPath": download_path_og})
+
+def check_download(directory, prefix, timeout=120):
+    #print(f"/u23F3 Waiting for file: {prefix}.xls (up to {timeout} seconds)")
+    end_time = time.time() + timeout
+    while time.time() < end_time:
+        for filename in os.listdir(directory):
+            if filename.startswith(prefix) and filename.endswith(('.xls', '.xlsx')) and not filename.endswith('.crdownload'):
+                print(f">>>Download complete: {filename}")
+                return filename
+        time.sleep(1)  # Check every second
+    print(f">>>Download (failed) timed out after {timeout} seconds for {prefix}")
+    return None
+
+def rename_og_to_yearwise(year_text):
+    old_path = os.path.join(os.path.expanduser("~"), "Documents","temp_dir")
+    new_path = os.path.join(os.path.expanduser("~"),"Documents","SHRCECHS_Claimbot","CLAIM_SETTLED_YEARWISE_CLEANED")
+    print(f">>>Renaming Og File to Yearwise - {year_text}")
+    old_file = os.path.join(old_path,f"CLAIMLIST_{user_id}.xls")
+    new_file = os.path.join(new_path,f"claim_settled_by_year_{year_text}.xlsx")
+    os.rename(old_file,new_file)
+    print(">>>Renamed!!!")
+
+def clean_data(year_text):
+    print(">>> Cleaning Data...")
+    new_path = os.path.join(os.path.expanduser("~"),"Documents","SHRCECHS_Claimbot","CLAIM_SETTLED_YEARWISE_CLEANED")
+    excel_file_to_clean = os.path.join(new_path,f"claim_settled_by_year_{year_text}.xlsx")
+    df = pd.read_excel(excel_file_to_clean)
+    df = df.drop(rows_del)
+    df.columns = fix_columns_indi
+    df.to_excel(excel_file_to_clean, index=False)
+
+    print(">>>Data Cleaning Successful")
+    
+def merge_all_claim_settled():
+        merged_file_claimsettled_loc = os.path.join(os.path.expanduser("~"),"Documents","SHRCECHS_Claimbot","merged_claim_settled.xlsx")
+        dfs = (
+        pd.read_excel(
+            os.path.join(
+                os.path.expanduser("~"),
+                "Documents",
+                "SHRCECHS_Claimbot",
+                "CLAIM_SETTLED_YEARWISE_CLEANED",
+                f"claim_settled_by_year_{2012 + i}.xlsx"
+            )
+        )
+        for i in range(1, total_financial_years)
+)
+        merged_file = pd.concat(dfs, ignore_index=True)
+        merged_file_claimsettled = merged_file
+        merged_file_claimsettled["Status"] = "Claim Settled"
+        merged_file_claimsettled.columns = fix_columns
+        merged_file_claimsettled.drop(0)
+        merged_file_claimsettled = merged_file_claimsettled.style.set_properties(**{'text-align': 'left'})
+        merged_file_claimsettled.to_excel(merged_file_claimsettled_loc, index=False)
+        print(">>> Merging Files Success... ")
+
+        print(">>> Arranging Columns...")
+        book = load_workbook(merged_file_claimsettled_loc)
+        sheet = book.active
+        for col, width in fix_col_width.items():
+            sheet.column_dimensions[col].width = width
+        book.save(merged_file_claimsettled_loc)
+        print(">>> Arranged Column Widths...")
+
 def maximize_terminal():
     hwnd = win32gui.GetForegroundWindow()
     win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
@@ -61,10 +160,10 @@ def create_user_folder(user_id):
 def close_moa_popup_if_exists(driver):
     try:
         WebDriverWait(driver, 5).until(
-            EC.visibility_of_element_located((By.XPATH, '//*[@id="ui-id-1"]'))
+            EC.visibility_of_element_located((By.XPATH, '//*[@id="ui-id-1"]')) 
         )
         close_button = WebDriverWait(driver, 5).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="mainheader"]/div[9]/div[3]/div/button'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="mainheader"]/div[10]/div[1]/button/span[1]')) 
         )
         # scroll_into_view(driver, close_button)
         close_button.click()
@@ -87,9 +186,17 @@ def handle_post_download_navigation(driver):
 
 def handle_post_login_navigation(driver):
     try:
+        noticewindow = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="mainheader"]/div[11]/div[1]/button/span[1]')))
+        noticewindow.click()
+        time.sleep(1)
+
+    except Exception as e:
+        print("⚠️ Notice Window didn't popup, Moving On...")
+
+    try:
         close_moa_popup_if_exists(driver)
 
-        checkbox = WebDriverWait(driver, 60).until(
+        checkbox = WebDriverWait(driver, 30000).until(
             EC.element_to_be_clickable((By.XPATH, '//*[@id="ihaveseennmi"]'))
         )
         # scroll_into_view(driver, checkbox)
@@ -264,28 +371,63 @@ def wait_for_specific_file(download_dir, prefix, timeout=300):
 
 def get_status_text(count_id):
     status_mapping = {
-        "13PT": "Processed for Settlement",
-        "99HI" : "Hold Claim",
-        "99PT": "Rejected Claims Processed", "99CT": "Cancel Claim", "99XT": "Referral Validity Expired",
-        "99YT": "Inactive Intimations"
-        , "1PT": "Admission Intimation Pending",
-        "1ST": "Admission Intimation Submitted", "1YT": "Emergency Intimation To Polyclinic",
-        "2MT": "Admission Intimated - With More Info", "1XT": "Emergency Intimation Rejected by Polyclinic",
-        "2ST": "Intimation Acknowledged", "2NT": "Need More Information [Int]",
-        "2XT": "Not Entitled", "3PT": "Claim Submission Pending", "4ST": "Claim Documents Received & Verified",
-        "5ST": "Scrutinizer Verified", "6ST": "Claim Authorized [BPA]",
-        "6NT": "Need More Information [Val]", "6XT": "Recommended for Rejection [BPA]",
-        "7ST": "Recommended for Approval [RC]", "7RT": "Review By Validator [App]",
-        "7NT": "Need More Information [App]", "7XT": "Recommended for Rejection [RC]",
-        "12ST": "Recommended for Approval [COrg]", "12RT": "Review By Validator [COrg]",
-        "12NT": "Need More Information [App]", "8ST": "Approved [RC. Dir]",
+        "1PT": "Admission Intimation Pending",
+        "1ST": "Admission Intimation Submitted", 
+        "2MT": "Admission Intimated - With More Info", 
+        "1YT": "Emergency Intimation To Polyclinic",
+        "1MT": "Emergency Intimated - With More Info",
+        "1XT": "Emergency Intimation Rejected by Polyclinic",
+        "2ST": "Intimation Acknowledged", 
+        "2NT": "Need More Information [Int]",
+        "2XT": "Not Entitled", 
+        "3PT": "Claim Submission Pending", 
+        "3ST": "Claim Submitted Electronically",
+        "3MT": "Claim Submitted Electronically - More Info",
+        "4PT": "Document Received",
+        "4ST": "Claim Documents Received & Verified",
+        "3NT": "Member Reimbursement NMI",
+        "4NT": "Need More Info - Docs [Verifier]",
+        "5ST": "Scrutinizer Verified",
+        "5NT": "Need More Info [Scr]",
+        "6ST": "Claim Authorized [BPA]",
+        "6NT": "Need More Information [Val]", 
+        "6XT": "Recommended for Rejection [BPA]",
+        "7ST": "Recommended for Approval [RC]", 
+        "7RT": "Review By Validator [App]",
+        "7NT": "Need More Information [App]", 
+        "7TST": "JD(HS) Review Reply - Recommendation",
+        "7TXT": "JD(HS) Review Reply - Rejection",
+        "7XT": "Recommended for Rejection [RC]",
+        "12ST": "Recommended for Approval [COrg]", 
+        "12RT": "Review By Validator [COrg]",
+        "12NT": "Need More Information [App]", 
+        "12TXT": "Review Reply - Rejection", 
+        "12TST": "Review Reply - Recommendation", 
+        "12XT": "Recommended for Rejection [COrg]", 
+        "8ST": "Approved [RC. Dir]",
         "8RT": "Review Required by MO [RC. Dir]", 
+        "8TT": "Review Required by Dir. Med [RC. Dir]", 
+        "8XT": "Rejected [RC. Dir]", 
+        "8IFT": "Review Required By IFA [RC.Dir]", 
+        "9ST": "Approved for Payment [Dy.MD]",
+        "9RT": "Review Required by MO (Dy. MD)",
+        "9TT": "Review Required by JD(HS) [Dy.MD]",
+        "9IFT": "Review Request By Dy.MD",
+        "9XT": "Rejected (Dy.MD)",
+        "10ST": "Approved for Payment [MD]",
         "10RT": "Review Required by MO (MD)",
-         "9ST": "Approved for Payment [Dy.MD]",
-         "3ST": "Claim Submitted Electronically",
-        "9XT" : "Rejected (Dy.MD)"
-        
-        
+        "10TT": "Review Required by JD(HS) [MD]",
+        "10IFT": "Review Request By MD",
+        "11ST": "Approved for Payment [MoD]",
+        "11XT": "Rejected [MoD]",
+        "11RT": "Review Required by MO (MoD)",
+        "13PT": "Processed for Settlement",
+        "99PT": "Rejected Claims Processed", 
+        "99HT" : "Hold Claim",
+        "99CT": "Cancel Claim", 
+        "99XT": "Referral Validity Expired",
+        "99YT": "Inactive Intimations",
+        "99ZT": "Inactive Submission"       
     }
     return status_mapping.get(count_id, "Unknown_Status")
 
@@ -423,14 +565,63 @@ def wait_for_file_rename(directory, expected_filename, timeout=200):
 def main():
     today = time.strftime("%Y-%m-%d")
     base_path = os.path.join(os.path.expanduser("~"), "Documents", "EchsData")
-
-    count_ids = ["13PT", "99HI"
-                 ,"99PT", "99CT", "99XT", "99YT",
-    "1PT", "1ST", "1YT", "2MT", "1XT",
-    "2ST", "2NT", "2XT", "3PT", "4ST",
-    "5ST", "6ST", "6NT", "6XT", "7ST",
-    "7RT", "7NT", "7XT", "12ST", "12RT",
-    "12NT", "8ST", "8RT", "10RT","9ST","9XT"
+    count_ids = [
+        "1PT",
+        "1ST",
+        "2MT",
+        "1YT",
+        "1MT",
+        "1XT",
+        "2ST",
+        "2NT",
+        "2XT",
+        "3PT",
+        "3ST",
+        "3MT",
+        "4PT",
+        "4ST",
+        "3NT",
+        "4NT",
+        "5ST",
+        "5NT",
+        "6ST",
+        "6NT",
+        "6XT",
+        "7ST",
+        "7RT",
+        "7TST",
+        "7TXT",
+        "7XT",
+        "12ST",
+        "12RT",
+        "12NT",
+        "12TXT",
+        "12TST",
+        "12XT",
+        "8ST",
+        "8RT",
+        "8TT",
+        "8XT",
+        "8IFT",
+        "9ST",
+        "9RT",
+        "9TT",
+        "9IFT",
+        "9XT",
+        "10ST",
+        "10RT",
+        "10TT",
+        "10IFT",
+        "11ST",
+        "11XT",
+        "11RT",
+        "13PT",
+        "99PT",
+        "99HT",
+        "99CT",
+        "99XT",
+        "99YT",
+        "99ZT"
     ]
 
     while True:
@@ -444,7 +635,17 @@ def main():
 
         driver = webdriver.Chrome() # service=Service(get_chrome_driver_path()), options=options
         driver.get("https://echsbpa.utiitsl.com/ECHS/....do")
-        print("\u23F3 Waiting for user to enter User ID and manually log in...")
+        driver.implicitly_wait(20)
+        # try:
+        #     WebDriverWait(driver, 1).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[10]/div[3]/div/button"))).click()
+        # except:
+        #     print("no popup before login")
+        # try:
+        #     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/table/tbody/tr[2]/td[2]/form/table/tbody/tr[1]/td[3]/table/tbody/tr[2]/td[2]/input[1]"))).send_keys("shrcechs")
+        #     WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/table/tbody/tr[2]/td[2]/form/table/tbody/tr[1]/td[3]/table/tbody/tr[4]/td[2]/input"))).send_keys("care@321")
+        # except:
+        #     time.sleep(10000)
+        print("\u23F3 Waiting for user to enter captcha and manually log in...")
 
         WebDriverWait(driver, 120).until(EC.presence_of_element_located((By.XPATH, '//*[@id="username"]')))
 
@@ -454,10 +655,9 @@ def main():
             while not user_id_fake_dropped and time.time() - start_time < 28800:
                 user_id_element = WebDriverWait(driver, 20).until(
                     EC.visibility_of_element_located((By.XPATH, '//*[@id="username"]')))
-                user_id_fake_dropped = user_id_element.get_attribute("value").strip()  
+                user_id_fake_dropped = user_id_element.get_attribute("value")
                 if not user_id_fake_dropped:
                     print("⚠️ User ID is empty! Please log in.")
-                    time.sleep(3)
             if not user_id_fake_dropped:
                 print("\u23F3 8 Hours have passed without user login. Proceeding with the final merge.")
                 merge_all_final_files(base_path)
@@ -465,16 +665,22 @@ def main():
                 return
             else:
                 print(f"👤 Detected User ID....")
+                time.sleep(5)
+                user_id_fake_dropped = user_id_element.get_attribute("value")
+                print(f"👤 Detected User ID....{user_id_fake_dropped}")
+
         except Exception as e:
             print(f"⚠️ Error detecting user ID: {e}")
             driver.quit()
             return
         
-        user_id = "SHRCECHS"
+        global user_id
+        user_id = user_id_fake_dropped.lower()
         user_path = create_user_folder(user_id)
 
         WebDriverWait(driver, 300).until(
             EC.presence_of_element_located((By.XPATH, '//*[@id="ihaveseennmi"]')))
+        
         handle_post_login_navigation(driver)
 
         driver.execute_cdp_cmd("Page.setDownloadBehavior", {
@@ -495,76 +701,6 @@ def main():
                     continue
                 time.sleep(1)
 
-                # if count_id == "13ST":
-                #     try:
-                #         print("🔍 Special handling for 13ST with SHRCECHS...")
-
-                #         patient_type_xpath = '//*[@id="newfilter"]/td[2]/select'
-                #         WebDriverWait(driver, 20).until(EC.presence_of_element_located((By.XPATH, patient_type_xpath)))
-                #         Select(driver.find_element(By.XPATH, patient_type_xpath)).select_by_visible_text("In-Patient")
-                #         print("➡️ Selected In-Patient")
-                #         time.sleep(2)
-
-                #         if export_to_excel(driver, user_path, timeout=200):
-                #             latest_file = wait_for_specific_file(user_path, "CLAIMLIST_" + user_id.lower(), timeout=200)
-                #             renamed_file = rename_file_to_status(user_path, status_text, latest_file, force_use_status=True, suffix="_InPatient")
-                #             wait_for_rename_completion(os.path.join(user_path, renamed_file))
-                #         else:
-                #             raise Exception("In-Patient download failed")
-
-                #         handle_post_download_navigation(driver)
-
-                #         # --- Out-Patient ---
-                #         print("🔁 Re-clicking 13ST for Out-Patient...")
-                #         element = WebDriverWait(driver, 20).until(
-                #             EC.element_to_be_clickable((By.ID, count_id)))
-                #         if not click_element_when_ready(driver, element, count_id):
-                #             raise Exception("13ST re-click failed")
-                #         time.sleep(2)
-
-                #         Select(driver.find_element(By.XPATH, patient_type_xpath)).select_by_visible_text("Out-Patient")
-                #         print("➡️ Selected Out-Patient")
-                #         time.sleep(2)
-
-                #         fin_year_xpath = '//*[@id="financialYear"]'
-                #         WebDriverWait(driver, 10).until(
-                #             EC.presence_of_element_located((By.XPATH, fin_year_xpath)))
-
-                #         year_dropdown = Select(driver.find_element(By.XPATH, fin_year_xpath))
-                #         total_years = len(year_dropdown.options)
-
-                #         for i in range(1, total_years):
-                #             year_text = year_dropdown.options[i].text.strip()
-                #             year_dropdown.select_by_index(i)
-                #             print(f"📅 Selected Financial Year: {year_text}")
-                #             time.sleep(1)
-
-                #             WebDriverWait(driver, 10).until(
-                #                 EC.presence_of_element_located((By.NAME, "displayMode")))
-
-                #             Select(driver.find_element(By.NAME, "displayMode")).select_by_visible_text("Export To Excel")
-                #             print("📦 Display Mode set to 'Export To Excel'")
-                #             time.sleep(1)
-
-                #             submit_btn = WebDriverWait(driver, 10).until(
-                #                 EC.element_to_be_clickable((By.XPATH, "//input[@value='Submit']")))
-                #             scroll_into_view(driver, submit_btn)
-                #             highlight_element(driver, submit_btn)
-                #             submit_btn.click()
-                #             print("🚀 Clicked Submit to trigger export")
-                #             time.sleep(3)
-
-                #             if export_to_excel(driver, user_path, timeout=180):
-                #                 latest_file = wait_for_specific_file(user_path, "CLAIMLIST_" + user_id.lower(), timeout=300)
-                #                 renamed_file = rename_file_to_status(user_path, status_text, latest_file, force_use_status=True, suffix=f"_OutPatient_{year_text}")
-                #                 wait_for_rename_completion(os.path.join(user_path, renamed_file))
-                #             else:
-                #                 print(f"⚠️ Download failed for year: {year_text}")
-
-                #         handle_post_download_navigation(driver)
-
-                #     except Exception as e:
-                #         print(f"⚠️ Special 13ST handling failed: {e}")
                 if count_id == "13PT":
                     try:
                         print("📌 Special handling for 13PT – forcing status for renaming...")
@@ -597,248 +733,105 @@ def main():
         print(f"\n✅ Done for User: {user_id}")
         print(f"📂 Files saved at: {user_path}")
         merge_raw_append(user_path)
-
-        print("🛑 No further user login. Generating All Final Merged file now...")
         merge_all_final_files(base_path)
         print("✅ Final All Merged File created.")
+        time.sleep(1)
+        driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow", "downloadPath": download_path_og})
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "13ST"))).click()
+        print(">>>Clicked On Claim Settled...")
+
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="newfilter"]/td[2]/select')))
+        Select(driver.find_element(By.XPATH, '//*[@id="newfilter"]/td[2]/select')).select_by_visible_text("Both")
+        driver.implicitly_wait(1)
+
+        financial_years = Select((driver.find_element(By.ID, "financialYear")))
+        global total_financial_years
+        total_financial_years = len(financial_years.options)
+        for i in range(1,total_financial_years):
+            financial_years.select_by_index(i)
+            selected_year_text_for_print = financial_years.options[i].text.strip()
+            selected_year_text_for_name = f"{2012+i}"
+            print(f">>>Selected Year -> {selected_year_text_for_print}")
+            select_excel_export = Select(driver.find_element(By.XPATH, '//*[@id="filterTable"]/tbody/tr[14]/td[2]/select'))
+            select_excel_export.select_by_visible_text("Export To Excel")
+            driver.find_element(By.XPATH, '//*[@id="submitbutton"]/td/input').click()
+            time.sleep(0.2)
+            download_result=check_download(download_path_og, f"CLAIMLIST_{user_id}")
+            if download_result:
+                print(f">>>Found File...")
+                time.sleep(0.5)
+                rename_og_to_yearwise(selected_year_text_for_name)
+                print(f">>>Renamed File to claim_settled_by_year_{selected_year_text_for_name}.xlsx successfully..")
+                time.sleep(0.5)
+                clean_data(selected_year_text_for_name)
+                time.sleep(0.5)
+            else:
+                print(">>> Download failed, stopping execution.")
+                break
+
+        print(">>>All Indivisual Files are downloaded and cleaned...")
         driver.quit()
+        merge_all_claim_settled()
+        maximize_terminal()
+        time.sleep(1)
+        print("\n\n\n>>> Now Merging Bot Starts 😉\n\n\n")
+        print(">>> It would take 2-3 mins... Kindly have patience ❤️...")
+
+
+
+        # MERGING OF FINAL FILE STARTS HERE
+
+
+        today = time.strftime("%Y-%m-%d")
+        both_final_files = [
+            f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot/merged_claim_settled.xlsx",
+            f"C:/Users/{pcuser}/Documents/EchsData/{today}/All_Merged_Files/All_Final_Merged.xlsx"
+        ]
+        final_output = f"C:/Users/{pcuser}/Documents/Full_Dashboard_ECHS_dated_{today}.xlsx"
+        df1 = pd.read_excel(both_final_files[0], sheet_name=None)
+        df1_combined = pd.concat(df1.values(), ignore_index=True)
+        print(">>> Read ClaimSettled File...")
+        df2 = pd.read_excel(both_final_files[1], sheet_name=None)
+        df2_combined = pd.concat(df2.values(), ignore_index=True)
+        print(">>> Read OtherFilesMerged...")
+        final_df = pd.concat([df1_combined, df2_combined], ignore_index=True)
+        final_df.to_excel(final_output, index=False)
+        book = load_workbook(final_output)
+        sheet = book.active
+        for col, width in fix_col_width.items():
+                sheet.column_dimensions[col].width = width
+        book.save(final_output)
+        print("\n!!!!! SUCCESS !!!!!!! ")
+        print(f">>> The Final File Is Stored In Documents Itself By Name : Full_Dashboard_ECHS_dated_{today}.xlsx\n\n")
+        os.startfile(final_output)
         break
+
+
+print("=========================================== WELCOME !!! =========================================\n\n")
 
 print(">>>Checking for previous junk data...")
 pcuser = os.getlogin()
-try:
-    if os.path.exists(f"C:/Users/{pcuser}/Documents/EchsData"):
-        shutil.rmtree(f"C:/Users/{pcuser}/Documents/EchsData")
-        print(">>> Old Junk Files Found... Deleted..!!")
-except Exception as e:
-    print(">>> No Previous Junk Files Found....")
-try:
-    if os.path.exists(f"C:/Users/{pcuser}/Documents/temp_dir"):
-        shutil.rmtree(f"C:/Users/{pcuser}/Documents/temp_dir")
-        print(">>> Old Junk Files Found... Deleted..!!")
-except Exception as e:
-    print(">>> No Previous Junk Files Found....")
-main()
-maximize_terminal()
-time.sleep(1)
-print("\n\n\n\n>>> Now See Saksham Jain's Magic 😉 ")
-print(">>> Making Claim Settled Merged File...")
-print(">>> You Will Need to Login To ECHS Again....")
-print(f"\n\n\n>>>Start Time => {time.ctime()}\n\n")
-time.sleep(2)
-minimize_terminal()
 
-
-# CLAIM_SETTLED_BOT_SAKSHAM STARTS HERE !!!!
-
-
-
-pcuser = os.getlogin()
-download_path_og = os.path.join(os.path.expanduser("~"), "Documents", "temp_dir")
-rows_del = [1,2,3,4,5,6,7]
-fix_columns_indi = ["Claim ID","Region","Hospital Name","Card ID","Name Of ESM","Patient Name","Patient Type","Admit Type","Accept Date","Net Claim Amt.","Approved Amt.","Processed On"]
-fix_columns = ["Claim ID","Region","Hospital Name","Card ID","Name Of ESM","Patient Name","Patient Type","Admit Type","Accept Date","Net Claim Amt.","Approved Amt.","Processed On","Status"]
-fix_col_width = {
-    'A': 13,
-    'B': 10,
-    'C': 49.4,
-    'D': 20,
-    'E': 22,
-    'F': 22.5,
-    'G': 10.5,
-    'H': 10,
-    'I': 18,
-    'J': 15.5,
-    'K': 17.2,
-    'L': 22,
-    'M': 37,
-}
-if os.path.exists(download_path_og):
-    shutil.rmtree(download_path_og)
-    os.makedirs(download_path_og)
-    print(">>> Found Previous Files...Cleaned")
-else:
-    os.makedirs(download_path_og)
-    print(">>> Made the download dir...")
-# options = Options()
-# options.add_experimental_option("prefs", {
-#     "download.prompt_for_download": False,
-#     "plugins.always_open_pdf_externally": True
-# })
-# options.add_argument('--ignore-certificate-errors')
-# options.add_argument('--start-maximized')
-
-driver = webdriver.Chrome() # service=Service(get_chrome_driver_path()), options=options
-driver.execute_cdp_cmd("Page.setDownloadBehavior", {"behavior": "allow", "downloadPath": download_path_og})
-print(">>> Changed the download path to Documents/temp_dir")
-
-def check_download(directory, prefix, timeout=120):
-    #print(f"/u23F3 Waiting for file: {prefix}.xls (up to {timeout} seconds)")
-    end_time = time.time() + timeout
-    while time.time() < end_time:
-        for filename in os.listdir(directory):
-            if filename.startswith(prefix) and filename.endswith(('.xls', '.xlsx')) and not filename.endswith('.crdownload'):
-                print(f">>>Download complete: {filename}")
-                return filename
-        time.sleep(1)  # Check every second
-    print(f">>>Download (failed) timed out after {timeout} seconds for {prefix}")
-    return None
-
-def rename_og_to_yearwise(year_text):
-    old_path = (f"C:/Users/{pcuser}/Documents/temp_dir")
-    new_path = (f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/CLAIM_SETTLED_YEARWISE_CLEANED")
-    print(f">>>Renaming Og File to Yearwise - {year_text}")
-    old_file = os.path.join(old_path,"CLAIMLIST_shrcechs.xls")
-    new_file = os.path.join(new_path,f"claim_settled_by_year_{year_text}.xlsx")
-    os.rename(old_file,new_file)
-
-def clean_data(year_text):
-    print(">>> Cleaning Data...")
-    new_path = (f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/CLAIM_SETTLED_YEARWISE_CLEANED")
-    excel_file_to_clean = os.path.join(new_path,f"claim_settled_by_year_{year_text}.xlsx")
-    df = pd.read_excel(excel_file_to_clean)
-    df = df.drop(rows_del)
-    df.columns = fix_columns_indi
-    df.to_excel(excel_file_to_clean, index=False)
-
-    print(">>>Data Cleaning Successful")
-    
-def merge_all_claim_settled():
-        merged_file_claimsettled_loc = f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/merged_claim_settled.xlsx"
-        dfs = (pd.read_excel(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/CLAIM_SETTLED_YEARWISE_CLEANED/claim_settled_by_year_{2012+i}.xlsx") for i in range(1,total_financial_years))
-        merged_file = pd.concat(dfs, ignore_index=True)
-        merged_file_claimsettled = merged_file
-        merged_file_claimsettled["Status"] = "Claim Settled"
-        merged_file_claimsettled.columns = fix_columns
-        merged_file_claimsettled.drop(0)
-        merged_file_claimsettled = merged_file_claimsettled.style.set_properties(**{'text-align': 'left'})
-        merged_file_claimsettled.to_excel(merged_file_claimsettled_loc, index=False)
-        print(">>> Merging Files Success... ")
-
-        print(">>> Arranging Columns...")
-        book = load_workbook(merged_file_claimsettled_loc)
-        sheet = book.active
-        for col, width in fix_col_width.items():
-            sheet.column_dimensions[col].width = width
-        book.save(merged_file_claimsettled_loc)
-        print(">>> Arranged Column Widths...")
-
-print("!!!!! Welcome... !!!!!")
-if os.path.exists(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot"):
-    print(">>>Previous Files Detected....Cleaning Junk....")
-    shutil.rmtree(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot")
-    os.makedirs(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/CLAIM_SETTLED_YEARWISE_CLEANED", exist_ok=False)
-else:
-    os.makedirs(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/CLAIM_SETTLED_YEARWISE_CLEANED", exist_ok=False)
-    print(">>>Clean Directory Made...")
-
-driver.get("https://www.echsbpa.utiitsl.com/ECHS")
-driver.implicitly_wait(10)
-print(">>>enter the captcha...")
-WebDriverWait(driver, 28800).until(EC.visibility_of_element_located((By.ID, 'infopara')))
-
-driver.implicitly_wait(2)
-time.sleep(1)
-
-try:
-    moa_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,'//*[@id="mainheader"]/div[9]/div[3]/div/button')))
-    driver.find_element(By.XPATH,'//*[@id="mainheader"]/div[9]/div[3]/div/button').click()
-    print(">>>MoA Popup Closed...")
-except:
-    print(">>>No MoA Popup Found ;)")
-driver.implicitly_wait(1)
-
-ihaveseennmi_button = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ihaveseennmi"]')))
-ihaveseennmi_button.click()
-print(">>>clicked on ihaveseennmi")
-
-(driver.find_element(By.ID, 'li_7')).click()
-driver.implicitly_wait(1)
-driver.find_element(By.XPATH, '//*[@id="7"]/li[3]/a').click()
-driver.implicitly_wait(2)
-WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "13ST"))).click()
-print(">>>Clicked On Claim Settled...")
-
-WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.XPATH, '//*[@id="newfilter"]/td[2]/select')))
-Select(driver.find_element(By.XPATH, '//*[@id="newfilter"]/td[2]/select')).select_by_visible_text("Both")
-driver.implicitly_wait(1)
-
-financial_years = Select((driver.find_element(By.ID, "financialYear")))
-total_financial_years = len(financial_years.options)
-for i in range(1,total_financial_years):
-    financial_years.select_by_index(i)
-    selected_year_text_for_print = financial_years.options[i].text.strip()
-    selected_year_text_for_name = f"{2012+i}"
-    print(f">>>Selected Year -> {selected_year_text_for_print}")
-    select_excel_export = Select(driver.find_element(By.XPATH, '//*[@id="filterTable"]/tbody/tr[14]/td[2]/select'))
-    select_excel_export.select_by_visible_text("Export To Excel")
-    submit_button = driver.find_element(By.XPATH, '//*[@id="submitbutton"]/td/input').click()
-    time.sleep(0.2)
-    download_result=check_download(download_path_og, "CLAIMLIST_shrcechs")
-    if download_result:
-        print(f">>>Found File...")
-        rename_og_to_yearwise(selected_year_text_for_name)
-        print(f">>>Renamed File to claim_settled_by_year_{selected_year_text_for_name}.xlsx successfully..")
-        clean_data(selected_year_text_for_name)
-    else:
-        print(">>> Download failed, stopping execution.")
-        break
-
-print(">>>All Indivisual Files are downloaded and cleaned...")
-driver.quit()
-merge_all_claim_settled()
-maximize_terminal()
-time.sleep(1)
-print("\n\n\n>>> Now Merging Bot Starts 😉\n\n\n")
-print(">>> It would take 2-3 mins... Kindly have patience ❤️...")
-
-
-
-# MERGING OF FINAL FILE STARTS HERE
-
-
-
-pcuser = os.getlogin()
-today = time.strftime("%Y-%m-%d")
-both_final_files = [
-    f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot/merged_claim_settled.xlsx",
-    f"C:/Users/{pcuser}/Documents/EchsData/{today}/All_Merged_Files/All_Final_Merged.xlsx"
-]
-final_output = f"C:/Users/{pcuser}/Documents/Full_Dashboard_ECHS_dated_{today}.xlsx"
-df1 = pd.read_excel(both_final_files[0], sheet_name=None)
-df1_combined = pd.concat(df1.values(), ignore_index=True)
-print(">>> Read ClaimSettled File...")
-df2 = pd.read_excel(both_final_files[1], sheet_name=None)
-df2_combined = pd.concat(df2.values(), ignore_index=True)
-print(">>> Read OtherFilesMerged...")
-final_df = pd.concat([df1_combined, df2_combined], ignore_index=True)
-final_df.to_excel(final_output, index=False)
-book = load_workbook(final_output)
-sheet = book.active
-for col, width in fix_col_width.items():
-        sheet.column_dimensions[col].width = width
-book.save(final_output)
-print("\n!!!!! SUCCESS !!!!!!! ")
-print(f">>> The Final File Is Stored In Documents Itself...\n\n")
-
-choice = input(">>> Would you like to clear old junk files?? (enter 'y' for yes or any key for exiting program.....) > ")
-if choice == "y":
-    print(">>> I Respect Your Decision And Concern For Your Storage Efficiency....")
-    print(">>> Removing Old Trash Files...")
+if os.path.exists(f"C:/Users/{pcuser}/Documents/EchsData"):
     shutil.rmtree(f"C:/Users/{pcuser}/Documents/EchsData")
-    shutil.rmtree(f"C:/Users/{pcuser}/Documents/temp_dir")
-    try:
-        shutil.rmtree(f"C:/Users/{pcuser}/Documents/SHRCECHS_ClaimBot")
-    except Exception as e:
-        print("..")   
-    print("--------------------Thankyou For Using This Tool 😊 BYEEE!!!!--------------------")
-    time.sleep(2)
-    os.startfile(final_output)
-    exit
+    print(">>> Old Junk Files Found... Deleted..!!")
 else:
-    print(">>> I Respect Your Decision....")
-    print("--------------------Thankyou For Using This Tool 😊 BYEEE!!!!--------------------")
-    print(f"\n\n>>> End Time => {time.ctime()}")
-    os.startfile(final_output)
-    time.sleep(2)
-    exit
+    print(">>> No Previous Junk Files Found....")
+
+if os.path.exists(f"C:/Users/{pcuser}/Documents/temp_dir"):
+    shutil.rmtree(f"C:/Users/{pcuser}/Documents/temp_dir")
+    print(">>> Old Junk Files Found... Deleted..!!")
+else:
+    print(">>> No Previous Junk Files Found....")
+
+if os.path.exists(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot"):
+    shutil.rmtree(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot")
+    os.mkdir(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot")
+    os.mkdir(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot/CLAIM_SETTLED_YEARWISE_CLEANED")
+    print(">>> Old Junk Files Found... Deleted..!!")
+else:
+    os.mkdir(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot")
+    os.mkdir(f"C:/Users/{pcuser}/Documents/SHRCECHS_Claimbot/CLAIM_SETTLED_YEARWISE_CLEANED")
+    print(">>> No Previous Junk Files Found....")
+
+main()
