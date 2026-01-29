@@ -1,26 +1,227 @@
-# ============================================================================================================================================
-#                                                             _____WORKING PLAN____
-# Check Emergency & Referral Cases
-# Fill Emergency Form
-# Opening Site
+# ================================================================ WORKING PLAN =====================================================================
+# AN AI GENERATED BOT REVIEW AND SUMMARY FOR NEXT DEVELOPERS - ( I haven't checked the summary dear it's just a simple code overview )
 #
-# TASKS: 1) Medical Info - Personal Details ( no no dono me )
-#        2) Admission Information - Admission Details ( from excel ) ( Check Planned(ref) or Emergency from the files in documents Folder )
-#                                   > If IPNO_emg file in documents - emergency case - select manual in Treatment(referal details),
-#                                           remarks - "intimation" , patient ip is referal number , wellness center code "70" and pres enter,
-#                                           endorsment by - "emg" , edorsment hosp - "shrc" , upload doc ( IPNO_emg )
-#                                           date of referal - date of admission
+# HIGH-LEVEL PROCESS FLOW:
 #
-#                                   > if IPNO_refphoto in documents - referal case - select emanual in treatment(referal details),
-#                                           wait for user to enter referal Number ( User should enter c to continue )
+# PHASE 1: DATA INITIALIZATION
+# ────────────────────────────────────────────────────────────────────────────
+# 1. Load main patient Excel file from user's Documents folder
+# 2. Load doctor details database from local backup
+# 3. Load MedNet credentials from secure storage
+# 4. Add placeholder columns for contact number, address, doctor name, and ward type
+# 5. Initialize separate tracking lists for emergency and referral cases
 #
-#        3) Diagnosis & Treatment Plan ( speciality - micu/ccu/icu )
-#        4) 
-# emg medical cert - from sys - name of hosp, addr of hosp, patient name, contatct num, patient addr, digital sign of doc, hosp auth stamp
-#                       manual -  card num, diagnosis, presenting complaint, treatment plan
-# in excel format - mlc, 
 #
-# ================================================================ Source Code ================================================================
+# PHASE 2: MedNet DATA EXTRACTION
+# ────────────────────────────────────────────────────────────────────────────
+# 1. LOGIN TO MedNet PORTAL (Hospital management system)
+#    - Enter credentials from loaded Excel file
+#    - Navigate to Inpatient/Reception section
+#
+# 2. PROCESS EACH PATIENT IN EXCEL
+#    - Filter patients with either CARD NO (emergency) or REFERRAL NO (referral cases)
+#    - For each valid patient:
+#      * Extract registration number
+#      * Parse bill date and convert to date components (day, month)
+#      * Open patient bill record using date and registration number
+#      * Scrape patient information:
+#        - Contact number
+#        - Address
+#        - Primary doctor name(s)
+#        - Ward type (critical/ward/single/twin)
+#      * Store extracted data back to Excel file
+#
+# 3. CATEGORIZE CASES
+#    - Add index to emergency cases list (has CARD NO)
+#    - Add index to referral cases list (has REFERRAL NO)
+#
+#
+# PHASE 3: EMERGENCY CASE PROCESSING (EMG FORM GENERATION)
+# ────────────────────────────────────────────────────────────────────────────
+# For each emergency case:
+#
+# 1. CREATE EMG INTIMATION DOCUMENT
+#    - Load template DOCX file
+#    - Fill form fields with patient data (11 specific line items):
+#      * Line 6: Patient name
+#      * Line 7: Insurance card number
+#      * Line 8: Contact number
+#      * Line 9: Address
+#      * Line 10: IP (Inpatient) number
+#      * Line 11: Bill date
+#      * Line 12: Bill time
+#      * Line 13: Chief complaints
+#      * Line 15: Diagnosis
+#      * Line 24: Doctor name
+#      * Line 25: Doctor designation
+#      * Line 26: Current date
+#    - Save as DOCX file
+#    - Convert to PDF
+#    - Delete temporary DOCX file
+#
+#
+# PHASE 4: EMERGENCY CASE SUBMISSION (NHA PORTAL)
+# ────────────────────────────────────────────────────────────────────────────
+# For each emergency case, perform automated form filling on NHA pre-authorization portal:
+#
+# 1. ACCESS NHA PRE-AUTHORIZATION PORTAL
+#    - Open provider.nha.gov.in
+#    - Close any popup modals if present
+#
+# 2. SEARCH PATIENT RECORD
+#    - Enter claim number in search field
+#    - Click search button
+#    - Click on patient record from results
+#    - Click "Medical Info" button
+#    - Click "Personal Info" button
+#
+# 3. FILL PERSONAL INFORMATION SECTION
+#    - Check button state (EDIT or SAVE)
+#    - If EDIT mode: click to enable editing
+#    - Select "NO" for two yes/no fields (e.g., pre-existing conditions)
+#
+# 4. FILL ADMISSION DETAILS SECTION
+#    - Open next section (Admission Information)
+#    - Click "Admission Details" expandable section
+#    - Check and enable EDIT mode if needed
+#    - Set admission date (calendar picker)
+#    - Set admission time (hour, minute, AM/PM dropdowns)
+#    - Set surgery/discharge date
+#    - Select "NO" for MLC (Medico-Legal Case)
+#    - Select admission type: "Emergency"
+#
+# 5. FILL TREATMENT SECTION
+#    - Open Treatment column
+#    - Click "Referral Manual" subsection
+#    - Enter IP number
+#    - Select wellness center: "D70"
+#    - Set referral date
+#    - Enter treatment details:
+#      * Code: "emg"
+#      * Facility: "shrc"
+#      * Remarks: "Intimation"
+#    - Upload EMG form PDF (file dialog)
+#
+# 6. FILL DIAGNOSIS INFORMATION
+#    - Open Diagnosis subsection
+#    - Enter first diagnosis code and select from dropdown
+#    - Click "Add Another"
+#    - Enter second diagnosis code and select from dropdown
+#    - Add as many diagnosis entries as needed
+#
+# 7. FILL TREATMENT PLAN
+#    - Open Treatment Plan section
+#    - Add ward type entry: "critical", "ICU", duration "7"
+#    - Add consultation entry: "consult", "Inpatient", duration "18"
+#
+# 8. UPLOAD SUPPORTING DOCUMENTS
+#    - Open Investigations/Documents section
+#    - Upload insurance card PDF
+#    - Upload patient photo JPEG
+#
+# 9. FILL CARE TEAM DETAILS
+#    - Open Care Team section
+#    - Select practitioner type: "Other"
+#    - Enter doctor name
+#    - Enter doctor registration number
+#    - Enter doctor qualification
+#    - Enter doctor contact number
+#    - Click "Add" to save care team member
+#
+# 10. SUBMIT FOR PRE-AUTHORIZATION
+#     - Click "Preview & Validate" button
+#     - Click "Validate" button
+#     - Click "Initiate Pre-Authorization" button
+#     - Confirm "YES" in confirmation dialog
+#     - Wait for submission confirmation
+#
+#
+# PHASE 5: REFERRAL CASE PROCESSING
+# ────────────────────────────────────────────────────────────────────────────
+# Repeat Phase 4 steps with these modifications:
+#
+# 1. SKIP EMG FORM GENERATION (uses existing referral form)
+#
+# 2. FILL REFERRAL DETAILS SECTION (instead of referral manual):
+#    - Select referral radio button
+#    - Enter referral number
+#    - Click search button
+#    - Enter intimation remarks
+#    - Upload referral form PDF
+#
+# 3. All other steps follow same pattern as emergency cases
+#
+#
+# KEY DATA STRUCTURES:
+# ────────────────────────────────────────────────────────────────────────────
+#
+# MAIN EXCEL FILE COLUMNS USED:
+#   - Regn. No. (Registration/IP number) - unique identifier
+#   - CARD NO (Insurance card - emergency cases)
+#   - REFERRAL NO (Referral ID - referral cases)
+#   - Bill Date (format: YYYY-MM-DD or DD-MM-YYYY)
+#   - Bill Time (format: HH:MM AM/PM)
+#   - Patient Name
+#   - Primary Doctor (may contain multiple names separated by "/")
+#   - COMPLAINTS (chief complaints)
+#   - DIAGNOSE (diagnosis code/description)
+#   - Claim No (claim identifier)
+#
+# OUTPUT COLUMNS (Auto-populated):
+#   - Contact No
+#   - Address
+#   - Doctor Name
+#   - Ward Type
+#
+# GENERATED FILES:
+#   - {IP_NUMBER}_emg.pdf - Emergency intimation form
+#   - {IP_NUMBER}_card.pdf - Insurance card (pre-existing)
+#   - {IP_NUMBER}_photo.jpeg - Patient photo (pre-existing)
+#   - {IP_NUMBER}_reffphoto.pdf - Referral document (pre-existing)
+#
+#
+# ERROR HANDLING STRATEGY:
+# ────────────────────────────────────────────────────────────────────────────
+#   - MedNet extraction errors: Skip patient and log, continue with next
+#   - Form filling errors: Try alternate XPATH (DOM structure variations), skip field if both fail
+#   - Critical failures: Sleep 24 hours to allow manual intervention
+#   - File operations: Attempt deletion, log if fails (non-blocking)
+#
+#
+# TECHNICAL IMPLEMENTATION DETAILS:
+# ────────────────────────────────────────────────────────────────────────────
+#
+# WEB AUTOMATION TOOLS:
+#   - Selenium WebDriver for browser automation
+#   - WebDriverWait for element synchronization
+#   - PyAutoGUI for file dialog input
+#
+# DATA PROCESSING:
+#   - Pandas for Excel operations
+#   - Python-DOCX for Word document manipulation
+#   - Docx2PDF for document conversion
+#
+# TIMING CONSIDERATIONS:
+#   - 5-10 second waits between major actions
+#   - 0.5-2 second waits for page transitions
+#   - 1-2 second pauses for file operations
+#   - 24-hour (86400s) timeout on critical errors
+#
+# ELEMENT INTERACTION STRATEGY:
+#   - Dynamic XPath selection with multiple fallbacks
+#   - Try/except blocks for each field (graceful degradation)
+#   - Date/time parsing from multiple format variations
+#   - Dropdown selection via keyboard input when possible
+#
+#
+# PROCESS STATISTICS:
+# ────────────────────────────────────────────────────────────────────────────
+#   - Per Emergency Case: ~5-6 minutes (form filling + submission)
+#   - Per Referral Case: ~4-5 minutes (submission)
+#   - Batch Processing: Sequential (one case at a time, waits between cases)
+#
+#
+# ================================================================ SOURCE CODE ================================================================
 
 from docx import Document
 from docx2pdf import convert
@@ -32,7 +233,10 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 import win32gui
 import win32con
 
@@ -51,14 +255,15 @@ main_excel['Address']=None
 main_excel['Doctor Name']=None
 main_excel['Ward Type']=None # critical / ward
 print(">>> Added the new columns for contact num, address, doctor name, ward type\n\n")
-final_emg_cases_index = []
+
+final_emg_cases_index = [0,1]
 final_ref_cases_index = []
 
 
 def main():
 
     try:
-        fetchdatamednet()
+        #fetchdatamednet()
         OpenCGHS()
         for i in range(len(final_emg_cases_index)):
             temp_index = final_emg_cases_index[i]
@@ -79,7 +284,7 @@ def main():
 
 
 def fetchdatamednet():
-    driver.get("http://10.150.65.44/Login.jsp")
+    driver.get("http://10.150.65.40/Login.jsp")
     WebDriverWait(driver, 60).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="j_username"]')))
     enter_id_btn = driver.find_element(By.XPATH, '//*[@id="j_username"]')
     enter_id_btn.send_keys(mednet_cred.loc[0]['ID'])
@@ -94,7 +299,7 @@ def fetchdatamednet():
     time.sleep(1)
     if ("activesublabel" in driver.find_element(By.XPATH, '//*[@id="RECEPTION"]').get_attribute("class").lower()):
         print(">>> Inpatient displayed...")
-        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="megaMenuPopupDiv"]/div/div[2]/div[1]/div[2]'))).click()
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[1]/div[3]/div[2]/div/div[1]/div[2]'))).click()
         inpatientbtn = WebDriverWait(driver , 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="leftNavigation"]/li[2]/a/div[2]')))
         inpatientbtn.click()
         print(">>> Opened Inpatient")
@@ -109,8 +314,8 @@ def fetchdatamednet():
         time.sleep(5)
 
     for i in range(len(main_excel)):
-        if (pd.isna(main_excel.loc[i,'CARD NO']) and pd.isna(main_excel.loc[i, 'REFERRAL NO'])):
-            main_excel.loc[i,'CARD NO'] = None
+        if (pd.isna(main_excel.loc[i, 'CARD NO']) and pd.isna(main_excel.loc[i, 'REFERRAL NO'])):
+            main_excel.loc[i, 'CARD NO'] = None
             print(f">>> Skipping Patient {main_excel.loc[i,'Regn. No.          ']}")
         else:
             print(f">>> Fetching Data For Patient {main_excel.loc[i,'Regn. No.          ']}")
@@ -121,13 +326,28 @@ def fetchdatamednet():
                 final_ref_cases_index.append(i)
 
             ip = main_excel.loc[i,'Regn. No.          ']
+            datesplit = str(main_excel.loc[i," Bill Date           "]).split("-")
+            if(len(datesplit[0]) == 4):
+                # datesplit = datesplit[2].split(" ")
+                date = str(int(datesplit[2]))
+                month = str(int(datesplit[1])-1)
+            else:
+                date = str(int(datesplit[0]))
+                month = str(int(datesplit[1])-1)
+
+            WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[3]/div[2]/div[2]/div[3]/div/div[2]/div[1]"))).click()
+            Select(driver.find_element(By.XPATH,"/html/body/div[7]/div/div/label[1]/select")).select_by_value(month)
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, f"//td[normalize-space()='{date}']"))).click()
+            
+
             ipinputbox = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '//*[@id="searchByRegnNo"]')))
             ipinputbox.clear()
             ipinputbox.send_keys(ip)
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[2]/div[2]/div[2]/div/div[6]/div[1]/div/div/input'))).clear()
+            # WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[2]/div[2]/div[2]/div/div[6]/div[1]/div/div/input'))).clear()
             print(">>> Opening Bill...")
             time.sleep(1)
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[2]/div[2]/div[3]/div[2]/div/div[1]/div[1]/div[1]/div[1]/div'))).click()
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[2]/div[2]/div[4]/div[2]/div/div[1]/div[1]/div[1]/div[1]/div'))).click()
+            time.sleep(1)
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[3]/div[2]/div[2]/div[3]/div[1]/div/div[1]/div[6]/div[2]/div[5]/div'))).click()
             time.sleep(2)
             print(">>> Opened Bill...")
@@ -235,42 +455,53 @@ def makeemgform(index): # name-line6, cardnum-line7, contact-line8, address-line
 def find_designation_doc(doc_name):
     docs = doc_name.split("/")
     for doc in docs:
-        row = (doc_details.index[doc_details["Employee Name"] == doc].to_list())
+        row = doc_details.index[doc_details["Employee Name"].str.contains(doc, case=False, na=False)].to_list()
         if (row == []):
             continue
         else:
             return row[0]
 
 def OpenCGHS():
-    driver.get("https://provider.nha.gov.in")
     try:
-        modal = WebDriverWait(driver, 500).until(
-            EC.presence_of_element_located(
-                (By.XPATH, "//div[contains(@class,'modal-content')]")
+        driver.get("https://provider.nha.gov.in")
+        try:
+            modal = WebDriverWait(driver, 500).until(
+                EC.presence_of_element_located(
+                    (By.XPATH, "//div[contains(@class,'modal-content')]")
+                )
             )
-        )
-        modal.find_element(
-            By.XPATH, ".//button[normalize-space()='CLOSE']"
-        ).click()
-    except Exception as e:
-        print(">>> No Popup Found...")
+            modal.find_element(
+                By.XPATH, ".//button[normalize-space()='CLOSE']"
+            ).click()
+        except Exception as e:
+            print(">>> No Popup Found...")
+    except:
+        print(" !!! BOT STOPPED DUE TO ERROR !!!")
+        time.sleep(86400)
 
 def emg_case(index):
     cardloc = os.path.join("C:\\", "Users", f"{pcuser}", "Documents", f"{main_excel.loc[index, "Regn. No.          "]}_card.pdf")
     patientphotoloc = os.path.join("C:\\", "Users", f"{pcuser}", "Documents", f"{main_excel.loc[index, "Regn. No.          "]}_photo.jpeg")
     diag = str(main_excel.loc[index, "DIAGNOSE"])
     emgformloc = os.path.join("C:\\", "Users", f"{pcuser}", "Documents", f"{main_excel.loc[index, "Regn. No.          "]}_emg.pdf")
-    docname = main_excel.loc[index, " Primary Doctor          "].split("/")[0].strip().title()
-    row = find_designation_doc(docname)
+    docs = main_excel.loc[index, " Primary Doctor          "].split("/")
+    for i in range(len(docs)):
+        docname = docs[i].strip().title()
+        docname = docname.replace("Dr. ", "").replace("Dr ", "")
+        row = find_designation_doc(docname)
+        if (row != None):
+            break
+
+    print(f">> Selected [{docname}] > row number - {row}")
     docregn = doc_details.loc[row, "Registration No."]
     docqualification = doc_details.loc[row, "Educational Qualification"]
-    doccontact = doc_details.loc[row, "Contact No."]
-    claimno = str(main_excel.loc[index, " Claim No           "])
+    doccontact = str(doc_details.loc[row, "Contact No."])
+    claimno = str(int(main_excel.loc[index, " Claim No           "]))
     ipnum = str(main_excel.loc[index, "Regn. No.          "])
     datesplit = str(main_excel.loc[index," Bill Date           "]).split("-")
     if(len(datesplit[0]) == 4):
-        datesplit = datesplit[2].split(" ")
-        date = str(int(datesplit[0]))
+        # datesplit = datesplit[2].split(" ")
+        date = str(int(datesplit[2]))
     else:
         date = str(int(datesplit[0]))
     fulltimesplit = str(main_excel.loc[index, " Bill Time           "]).split(" ")
@@ -281,8 +512,11 @@ def emg_case(index):
 
 
     try:
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).click()
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).send_keys(claimno)
+        element = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input')))
+        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
+        element.click()
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).click()
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).send_keys(claimno)
         print(">> Entered ClaimNo.")
         WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//input[@placeholder='Search']/preceding-sibling::span[contains(@class,'icon')]"))).click()
         time.sleep(0.5)
@@ -364,23 +598,23 @@ def emg_case(index):
 
         # CHECK ADMSSION DETAILS SAVE BUTTON STATE:-
         try:
-            save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+            save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
             if ("EDIT" in str(save_btn_state)):
-                WebDriverWait(driver,15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                WebDriverWait(driver,15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
             print(f"current button state is: {save_btn_state}")
         except:
             print("Couldn't get button state")
             try:
-                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
                 if("EDIT" in str(save_btn_state)):
-                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
                 print(f"current button state is: {save_btn_state}")
 
             except:
                 print("Couldn't get button state...")
-                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
                 if("EDIT" in str(save_btn_state)):
-                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
                 print(f"current button state is: {save_btn_state}")
 
         # FILL ADMISSION DETAILS COLUMN :-
@@ -640,6 +874,10 @@ def emg_case(index):
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("7")
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("7")
@@ -653,6 +891,10 @@ def emg_case(index):
         # ADD CONSULTATION :-
         try:
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("consult"+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("consult"+Keys.ENTER)
@@ -661,6 +903,10 @@ def emg_case(index):
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("Inp"+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("Inp"+Keys.ENTER)
@@ -668,6 +914,10 @@ def emg_case(index):
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
+            try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
             try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("18")
             except:
@@ -735,21 +985,59 @@ def emg_case(index):
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[3]/div/div/div/div[1]/div[2]/input"))).send_keys(docqualification+Keys.ENTER)
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div"))).click()
+            time.sleep(1.5)
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div/input"))).send_keys(doccontact+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div/input"))).send_keys(doccontact+Keys.ENTER)
-
+            try:
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/button"))).click()
+            except:
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/button"))).click()
+        
         except:
             print("Couldn't fill care team details")
 
-        # GO BACK TO HOME PAGE :-
+        # PREVIEW AND VALIDATE...
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Preview & Validate']"))).click()
+        time.sleep(1)
         try:
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[1]/div/div[1]/button[1]"))).click()
-            print(">>> Went back to home page...")
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='validate']"))).click()
+            time.sleep(1)
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Initiate Pre-Authorization']"))).click()
+            time.sleep(1)
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='YES']"))).click()
+            time.sleep(1)
+            print(f"\n>>> Patient {ipnum} process completed... !!!\n")
+            time.sleep(8)
         except:
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[2]/div/div[1]/button[1]"))).click()
-            print(">>> Went back to home page...")
-                
+            print("!!! Patient IP358516 process couldn't complete due to error... !!!")
+            print("!!! Going to home\n")
+            try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[1]/div/div[1]/button[1]"))).click()
+            except:
+                try:
+                    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[2]/div/div[1]/button[1]"))).click()
+                except:    
+                    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[1]/div[2]/div/div[1]/button[1]"))).click()
+            
+            file = f"c:/Users/{pcuser}/Documents/CGHS_INTIMATION_EXCEL.xlsx"
+            wb = load_workbook(file)
+            ws = wb.active
+
+            red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+
+            # Color full first row (Excel row 1)
+            for cell in ws[index+2]:
+                cell.fill = red_fill
+
+            wb.save(file)
+
+            print(f"!!! Coloured index {index} in Red")
+            time.sleep(8)
 
     except Exception as e:
         print(">>>> BOT STOPPED FOR 24HRS... CHECK MANUALLY...!!!!")
@@ -763,18 +1051,25 @@ def ref_case(index):
     patientphotoloc = os.path.join("C:\\", "Users", f"{pcuser}", "Documents", f"{main_excel.loc[index, "Regn. No.          "]}_photo.jpeg")
     diag = str(main_excel.loc[index, "DIAGNOSE"])
     reffphotoloc = os.path.join("C:\\", "Users", f"{pcuser}", "Documents", f"{main_excel.loc[index, "Regn. No.          "]}_reffphoto.pdf")
-    docname = main_excel.loc[index, " Primary Doctor          "].split("/")[0].strip().title()
-    row = find_designation_doc(docname)
+    docs = main_excel.loc[index, " Primary Doctor          "].split("/")
+    for i in range(len(docs)):
+        docname = docs[i].strip().title()
+        docname = docname.replace("Dr. ", "").replace("Dr ", "")
+        row = find_designation_doc(docname)
+        if (row != None):
+            break
+
+    print(f">> Selected [{docname}] > row number - {row}")
     docregn = doc_details.loc[row, "Registration No."]
     docqualification = doc_details.loc[row, "Educational Qualification"]
-    doccontact = doc_details.loc[row, "Contact No."]
-    claimno = str(main_excel.loc[index, " Claim No           "])
+    doccontact = str(doc_details.loc[row, "Contact No."])
+    claimno = str(int(main_excel.loc[index, " Claim No           "]))
     ipnum = str(main_excel.loc[index, "Regn. No.          "])
     reffnum = str(main_excel.loc[index, "REFERRAL NO"])
     datesplit = str(main_excel.loc[index," Bill Date           "]).split("-")
     if(len(datesplit[0]) == 4):
-        datesplit = datesplit[2].split(" ")
-        date = str(int(datesplit[0]))
+        # datesplit = datesplit[2].split(" ")
+        date = str(int(datesplit[2]))
     else:
         date = str(int(datesplit[0]))
     fulltimesplit = str(main_excel.loc[index, " Bill Time           "]).split(" ")
@@ -784,6 +1079,9 @@ def ref_case(index):
     min = timesplit[1]
 
     try:
+        element = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input')))
+        driver.execute_script("arguments[0].scrollIntoView({behavior: 'smooth', block: 'center'});", element)
+        element.click()
         WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).click()
         WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[1]/div[2]/div[3]/div[1]/div[2]/div/div[4]/div/input'))).send_keys(claimno)
         print(">> Entered ClaimNo.")
@@ -867,23 +1165,23 @@ def ref_case(index):
 
         # CHECK ADMSSION DETAILS SAVE BUTTON STATE:-
         try:
-            save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+            save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
             if ("EDIT" in str(save_btn_state)):
-                WebDriverWait(driver,15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                WebDriverWait(driver,15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
             print(f"current button state is: {save_btn_state}")
         except:
             print("Couldn't get button state")
             try:
-                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
                 if("EDIT" in str(save_btn_state)):
-                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
                 print(f"current button state is: {save_btn_state}")
 
             except:
                 print("Couldn't get button state...")
-                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
+                save_btn_state = WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).text
                 if("EDIT" in str(save_btn_state)):
-                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[7]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
+                    WebDriverWait(driver, 15).until(EC.element_to_be_clickable((By.XPATH, '/html/body/div[1]/div[2]/div[6]/div[2]/div/div/div/div/div/div/div/div/div/div/div[2]/div/form/div/div/div[1]/div/button'))).click()
                 print(f"current button state is: {save_btn_state}")
 
         # FILL ADMISSION DETAILS COLUMN :-
@@ -1106,6 +1404,10 @@ def ref_case(index):
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("7")
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("7")
@@ -1119,6 +1421,10 @@ def ref_case(index):
         # ADD CONSULTATION :-
         try:
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("consult"+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("consult"+Keys.ENTER)
@@ -1127,6 +1433,10 @@ def ref_case(index):
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[1]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]"))).click()
+            try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("Inp"+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys("Inp"+Keys.ENTER)
@@ -1134,6 +1444,10 @@ def ref_case(index):
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
             # except:
             #     WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[2]/div[2]/div/div/div/div[1]/div[2]/input"))).send_keys(Keys.ENTER)
+            try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).clear()
             try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[3]/div/div/div[1]/div[2]/div/div/div[3]/div[2]/div/input"))).send_keys("18")
             except:
@@ -1200,21 +1514,60 @@ def ref_case(index):
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[3]/div/div/div/div[1]/div[2]/input"))).send_keys(docqualification+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[3]/div/div/div/div[1]/div[2]/input"))).send_keys(docqualification+Keys.ENTER)
+            time.sleep(1)
+            try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div"))).click()
+            except:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div"))).click()
+            time.sleep(1.5)
             try:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div/input"))).send_keys(doccontact+Keys.ENTER)
             except:
                 WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[2]/div/div/div/div/form/div[1]/div[4]/div/input"))).send_keys(doccontact+Keys.ENTER)
+            try:
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[6]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/button"))).click()
+            except:
+                WebDriverWait(driver,10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[7]/div[3]/div/div/div/div/div/div/div/div/div[5]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/button"))).click()
 
         except:
             print("Couldn't fill care team details")
 
-        # GO BACK TO HOME PAGE :-
+        # PREVIEW AND VALIDATE...
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Preview & Validate']"))).click()
+        time.sleep(1)
         try:
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[1]/div/div[1]/button[1]"))).click()
-            print(">>> Went back to home page...")
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='validate']"))).click()
+            time.sleep(1)
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='Initiate Pre-Authorization']"))).click()
+            time.sleep(1)
+            WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "//button[text()='YES']"))).click()
+            time.sleep(1)
+            print(f"\n>>> Patient {ipnum} process completed... !!!\n")
+            time.sleep(8)
         except:
-            WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[2]/div/div[1]/button[1]"))).click()
-            print(">>> Went back to home page...")
+            print("!!! Patient IP358516 process couldn't complete due to error... !!!")
+            print("!!! Going to home\n")
+            try:
+                WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[1]/div/div[1]/button[1]"))).click()
+            except:
+                try:
+                    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[2]/div[2]/div/div[1]/button[1]"))).click()
+                except:    
+                    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.XPATH, "/html/body/div[1]/div[1]/div[2]/div/div[1]/button[1]"))).click()
+            
+            file = f"c:/Users/{pcuser}/Documents/CGHS_INTIMATION_EXCEL.xlsx"
+            wb = load_workbook(file)
+            ws = wb.active
+
+            red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
+
+            # Color full first row (Excel row 1)
+            for cell in ws[index+2]:
+                cell.fill = red_fill
+
+            wb.save(file)
+            print(f"!!! Coloured index {index} in Red")
+            time.sleep(8)
 
     except Exception as e:
         print(">>>> BOT STOPPED FOR 24HRS... CHECK MANUALLY...!!!!")
